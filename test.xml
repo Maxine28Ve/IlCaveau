@@ -1,0 +1,13 @@
+<root>
+  <masterpassword>Some master password</masterpassword>
+  <tuple>
+    <service>Service</service>
+    <username>Username</username>
+    <password>Password</password>
+  </tuple>
+  <tuple>
+    <service>Service 2</service>
+    <username>Username 2</username>
+    <password>Password 2</password>
+  </tuple>
+</root>
