@@ -1,12 +1,16 @@
 #!/usr/bin/python3
 import os
+import time
 import xml.etree.ElementTree as ET
 import hashlib
+import AESCipher
+import Password
 
 # ============ UTILITIES =======================================================
 def print_header(text):
     text = " " + text + " "
     htl = int(len(text)/2)
+    number_of_hashes = 20
     total_len = (number_of_hashes - htl) if number_of_hashes - htl > 0 else 2
     print("\n" + "#"*total_len + text + "#"*total_len)
     print_separator(number_of_hashes)
@@ -34,9 +38,12 @@ def menu():
     while(choice != 0):
         print_header("Main Menu")
         print("1) Print everything")
+        print("2) Add new entry")
+        print("3) Delete entries")
+        print("4) Modify entries")
         print("")
-        print("2) Load from file")
-        print("3) Change master password") # TODO
+        print("5) Load from file")
+        print("6) Change master password") # TODO
         print("0) Quit")
         try:
             choice = int(input(">> Choice: "))
@@ -49,9 +56,9 @@ def menu():
         if(choice == 1):
             tuples = get_all_tuples(root)
             print_all_tuples(tuples)
-        elif(choice == 2):
+        elif(choice == 5):
             root = load_from_file()
-        elif(choice == 3):
+        elif(choice == 6):
             change_master_password()
 
 # ============= PASSWORDS FUNCTIONS =================================================
@@ -60,12 +67,13 @@ def get_all_tuples(root):
         return []
     tuples = []
     tmp = []
-    for item in root:
-        for subitem in item:
-            tmp.append(subitem.text)
-        tuples.append(tmp)
+    for tuple in root.findall("tuple"):
+        for attribute in tuple:
+            tmp.append(attribute.text)
+        password = Password.Password(tmp[0], tmp[1], tmp[2]).new()
+        tuples.append(password)
         tmp = []
-    return tuples[1:]
+    return tuples
 
 def print_all_tuples(tuples):
     counter = 1
@@ -73,8 +81,8 @@ def print_all_tuples(tuples):
     max_len = 0
     os.system("clear")
     print_header("Your passwords")
-    for tuple in tuples:
-        str = "{}) {} | {} | {}".format(counter, tuple[0], tuple[1], tuple[2])
+    for password in tuples:
+        str = "{}) {} | {} | {}".format(counter, password.get_service(), password.get_username(), password.get_password())
         counter += 1
         if(max_len < len(str)):
             max_len = len(str)
@@ -95,7 +103,14 @@ def change_master_password():
         set_master_password(new_master_password_digest)
 
 def set_master_password(new_master_password_digest):
+    pass
 
+def add_tuple():
+
+# ============= CRYPTO FUNCTIONS ==============================================
+def encrypt(tuples):
+    for tuples in tuples:
+        pass
 # ============= FILES FUNCTIONS =================================================
 def load_from_file():
     os.system("clear")
@@ -133,6 +148,8 @@ def list_xml_files(files, dir):
     print("\n{}) Load from another directory".format(counter))
     return counter
 
+def list_to_xml(list):
+    pass
 
 
 def main():
