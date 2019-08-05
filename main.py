@@ -3,8 +3,9 @@ import os
 import time
 import xml.etree.ElementTree as ET
 import hashlib
-import AESCipher
+from AESCipher import AESCipher
 import Password
+from Database import Database
 
 # ============ UTILITIES =======================================================
 def print_header(text):
@@ -23,15 +24,19 @@ def print_error(text):
     htl = int(len(text)/2)
     number_of_dashes = 20
     total_len = (number_of_dashes - htl) if number_of_dashes - htl > 0 else 2
-    print("\n" + "<!>"*total_len + text + "<!>"*total_len)
+    print("\n<!>" + "<!>"*total_len + text + "<!>"*total_len + "<!>")
 
 def hash_string(string):
     """
     Return a SHA-256 hash of the given string
     """
     return hashlib.sha256(string.encode('utf-8')).hexdigest()
-# ============= PASSWORD FUNCTIONS =============================================
+# ============= MISC FUNCTIONS =============================================
 def menu():
+    key = input_and_test_password()
+    if(key is None):
+        print_error("Go fuck yourself ( ͡° ͜ʖ ͡°)")
+        return 0
     choice = -1
     root = None
     tuples = []
@@ -54,13 +59,19 @@ def menu():
             os.system("clear")
             print_error("I need an integer")
         if(choice == 1):
-            tuples = get_all_tuples(root)
-            print_all_tuples(tuples)
+#            tuples = get_all_tuples(root)
+            print_header("Choice is equal to 1")
+            encrypt(key)
+            decrypt(key)
+#            print_all_tuples(tuples)
+        elif(choice == 2):
+            add_tuple()
         elif(choice == 5):
             root = load_from_file()
         elif(choice == 6):
             change_master_password()
-
+    print_error("Bye Bye")
+    return 0
 # ============= PASSWORDS FUNCTIONS =================================================
 def get_all_tuples(root):
     if(root == None):
@@ -90,6 +101,7 @@ def print_all_tuples(tuples):
     print("-" * max_len + "\n")
 
 def change_master_password():
+    db = Database()
     new_master_password = "a"
     confirm_new_master_password = "b"
     while(new_master_password != confirm_new_master_password):
@@ -99,18 +111,62 @@ def change_master_password():
         if(new_master_password != confirm_new_master_password):
             print_error("The passwords do not correspond. Retry")
             continue
-        new_master_password_digest = hash_string(new_master_password)
-        set_master_password(new_master_password_digest)
 
-def set_master_password(new_master_password_digest):
-    pass
+    db.update_masterpassword(new_master_password)
 
 def add_tuple():
+    database = Database()
+    print_header("New entry")
+    service = input("> Service:")
+    username = input("> Username:")
+    password = input("> password:")
+    empties = 0
+    if(service == ""):
+        empties += 1
+    if(username == ""):
+        empties += 1
+    if(password == ""):
+        empties += 1
+    if(empties < 2):
+        database.insert(service, username, password)
+    else:
+        print_error("Not enough data to insert in the database (minimum 1)")
+    database.quit()
 
-# ============= CRYPTO FUNCTIONS ==============================================
-def encrypt(tuples):
-    for tuples in tuples:
-        pass
+# ============= SECURITY FUNCTIONS ==============================================
+def encrypt(key):
+    cipher = AESCipher(key)
+    db = Database()
+    tuples = db.load_entries()
+    tmp = []
+    print(tuples)
+    for tuple in tuples:
+        tuple_2 = cipher.encrypt(tuple[2])
+        tmp.append([tuple[0], tuple[1], tuple_2])
+    db.update_passwords(tmp)
+
+def decrypt(key):
+    cipher = AESCipher(key)
+    db = Database()
+    tuples = db.load_entries()
+    tmp = []
+    print(tuples)
+    for tuple in tuples:
+        tuple_2 = cipher.decrypt(tuple[2])
+        tmp.append([tuple[0], tuple[1], tuple_2])
+    db.update_passwords(tmp)
+
+def input_and_test_password():
+    os.system("clear")
+    db = Database()
+    print_header("Makin\' Bacon")
+    attacking = input("> Insert password: ")
+    defending = db.get_masterpassword()[0]
+    if(hash_string(attacking) == defending):
+        return attacking
+    else:
+        return None
+
 # ============= FILES FUNCTIONS =================================================
 def load_from_file():
     os.system("clear")
