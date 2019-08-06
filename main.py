@@ -7,6 +7,8 @@ from AESCipher import AESCipher
 import Password
 from Database import Database
 
+# ============ GLOBAL VARS =====================================================
+
 # ============ UTILITIES =======================================================
 def print_header(text):
     text = " " + text + " "
@@ -37,9 +39,11 @@ def menu():
     if(key is None):
         print_error("Go fuck yourself ( ͡° ͜ʖ ͡°)")
         return 0
+
     choice = -1
     root = None
-    tuples = []
+    entries = load(key)
+
     while(choice != 0):
         print_header("Main Menu")
         print("1) Print everything")
@@ -47,8 +51,8 @@ def menu():
         print("3) Delete entries")
         print("4) Modify entries")
         print("")
-        print("5) Load from file")
-        print("6) Change master password") # TODO
+        print("5) Change master password") # TODO
+        print("6) Save current entries state")
         print("0) Quit")
         try:
             choice = int(input(">> Choice: "))
@@ -59,41 +63,26 @@ def menu():
             os.system("clear")
             print_error("I need an integer")
         if(choice == 1):
-#            tuples = get_all_tuples(root)
-            print_header("Choice is equal to 1")
-            encrypt(key)
-            decrypt(key)
-#            print_all_tuples(tuples)
+            print_all_entries(entries)
         elif(choice == 2):
-            add_tuple()
+            entries.append(new_entry())
         elif(choice == 5):
-            root = load_from_file()
-        elif(choice == 6):
             change_master_password()
+        elif(choice == 6):
+            save(key, entries)
     print_error("Bye Bye")
     return 0
-# ============= PASSWORDS FUNCTIONS =================================================
-def get_all_tuples(root):
-    if(root == None):
-        return []
-    tuples = []
-    tmp = []
-    for tuple in root.findall("tuple"):
-        for attribute in tuple:
-            tmp.append(attribute.text)
-        password = Password.Password(tmp[0], tmp[1], tmp[2]).new()
-        tuples.append(password)
-        tmp = []
-    return tuples
 
-def print_all_tuples(tuples):
+# ============= PASSWORDS FUNCTIONS =================================================
+
+def print_all_entries(entries):
     counter = 1
     str = ""
     max_len = 0
     os.system("clear")
     print_header("Your passwords")
-    for password in tuples:
-        str = "{}) {} | {} | {}".format(counter, password.get_service(), password.get_username(), password.get_password())
+    for entry in entries:
+        str = "{}) {} | {} | {}".format(counter, entry[0], entry[1], entry[2])
         counter += 1
         if(max_len < len(str)):
             max_len = len(str)
@@ -114,12 +103,11 @@ def change_master_password():
 
     db.update_masterpassword(new_master_password)
 
-def add_tuple():
-    database = Database()
+def new_entry():
     print_header("New entry")
-    service = input("> Service:")
-    username = input("> Username:")
-    password = input("> password:")
+    service = input("> Service: ")
+    username = input("> Username: ")
+    password = input("> password: ")
     empties = 0
     if(service == ""):
         empties += 1
@@ -127,34 +115,38 @@ def add_tuple():
         empties += 1
     if(password == ""):
         empties += 1
-    if(empties < 2):
-        database.insert(service, username, password)
+    if(empties < 3):
+        return [service, username, password]
     else:
         print_error("Not enough data to insert in the database (minimum 1)")
-    database.quit()
+    return []
 
 # ============= SECURITY FUNCTIONS ==============================================
-def encrypt(key):
-    cipher = AESCipher(key)
+def save(key, entries):
     db = Database()
-    tuples = db.load_entries()
+    cipher = AESCipher(key)
     tmp = []
-    print(tuples)
-    for tuple in tuples:
-        tuple_2 = cipher.encrypt(tuple[2])
-        tmp.append([tuple[0], tuple[1], tuple_2])
-    db.update_passwords(tmp)
+    print(entries)
+    for entry in entries:
+        entry_2 = cipher.encrypt(entry[2])
+        tmp.append([entry[0], entry[1], entry_2])
+    if(db.update(tmp)):
+        print_error("Couldn't save")
 
-def decrypt(key):
+def load(key):
     cipher = AESCipher(key)
     db = Database()
-    tuples = db.load_entries()
+    entries = db.load_entries()
     tmp = []
-    print(tuples)
-    for tuple in tuples:
-        tuple_2 = cipher.decrypt(tuple[2])
-        tmp.append([tuple[0], tuple[1], tuple_2])
-    db.update_passwords(tmp)
+    print(entries)
+    for entry in entries:
+        try:
+            entry_2 = cipher.decrypt(entry[2])
+        except Error as e:
+            print("Error: " + str(e))
+        tmp.append([entry[0], entry[1], entry_2])
+    print(tmp)
+    return tmp
 
 def input_and_test_password():
     os.system("clear")
@@ -167,45 +159,6 @@ def input_and_test_password():
     else:
         return None
 
-# ============= FILES FUNCTIONS =================================================
-def load_from_file():
-    os.system("clear")
-    default_dir = "passwords/"
-    files = get_all_xml_files_from_filenames_array(get_all_files(default_dir))
-    counter = list_xml_files(files, default_dir)
-    choice = int(input(">> Load from: "))
-    while(choice >= counter):
-        os.system("clear")
-        dir = input(">> Dir: ")
-        files = get_all_xml_files_from_filenames_array(get_all_files(dir))
-        counter = list_xml_files(files, dir)
-        choice = int(input(">> Load from: "))
-    os.system("clear")
-
-    return ET.parse(files[choice - 1]).getroot()
-
-
-def get_all_files(dir):
-    files =  []
-    for dirpath, dirnames, filenames in os.walk(dir):
-        files.extend(filenames)
-    return files
-def get_all_xml_files_from_filenames_array(filenames):
-    return [filename for filename in filenames if ".xml" in filename]
-
-def list_xml_files(files, dir):
-    os.system("clear")
-    print("Listing {}. Load from:".format(dir))
-    counter = 1
-    for file in files:
-        if(".xml" in file):
-            print("{}) {}".format(counter, file))
-            counter += 1
-    print("\n{}) Load from another directory".format(counter))
-    return counter
-
-def list_to_xml(list):
-    pass
 
 
 def main():
