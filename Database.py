@@ -1,7 +1,9 @@
 #!/usr/bin/python3
 import pymysql
 import hashlib
+import warnings
 from AESCipher import AESCipher
+
 class Database:
 
     def __init__(self):
@@ -31,7 +33,6 @@ class Database:
             VALUES ("{}", "{}")""".format(self.__get_hash(pwd), self.__get_hash(pwd))
             print(sql)
             try:
-
                 cursor.execute(sql)
                 self.db.commit()
             except:

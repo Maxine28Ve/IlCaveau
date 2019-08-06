@@ -65,7 +65,9 @@ def menu():
         if(choice == 1):
             print_all_entries(entries)
         elif(choice == 2):
-            entries.append(new_entry())
+            result = new_entry()
+            if(result != None):
+                entries.append(result)
         elif(choice == 5):
             change_master_password()
         elif(choice == 6):
@@ -119,17 +121,16 @@ def new_entry():
         return [service, username, password]
     else:
         print_error("Not enough data to insert in the database (minimum 1)")
-    return []
+    return None
 
 # ============= SECURITY FUNCTIONS ==============================================
 def save(key, entries):
     db = Database()
     cipher = AESCipher(key)
     tmp = []
-    print(entries)
     for entry in entries:
         entry_2 = cipher.encrypt(entry[2])
-        tmp.append([entry[0], entry[1], entry_2])
+        tmp.append([entry[0], entry[1], entry_2.decode()])
     if(db.update(tmp)):
         print_error("Couldn't save")
 
@@ -138,14 +139,12 @@ def load(key):
     db = Database()
     entries = db.load_entries()
     tmp = []
-    print(entries)
     for entry in entries:
         try:
             entry_2 = cipher.decrypt(entry[2])
         except Error as e:
             print("Error: " + str(e))
         tmp.append([entry[0], entry[1], entry_2])
-    print(tmp)
     return tmp
 
 def input_and_test_password():
