@@ -9,21 +9,23 @@ class Database:
     def __init__(self):
         self.db = pymysql.connect("localhost","python", "CuloMadonna19@__", "Passwords" )
         cursor = self.db.cursor()
-        sql = """CREATE TABLE IF NOT EXISTS passwords (
-                    id INT AUTO_INCREMENT NOT NULL,
-                    service VARCHAR(128),
-                    username VARCHAR(128),
-                    password VARCHAR(128),
-                    PRIMARY KEY(id)
-                )"""
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore")
+            sql = """CREATE TABLE IF NOT EXISTS passwords (
+                        id INT AUTO_INCREMENT NOT NULL,
+                        service VARCHAR(128),
+                        username VARCHAR(128),
+                        password VARCHAR(128),
+                        PRIMARY KEY(id)
+                    )"""
 
-        cursor.execute(sql)
-        sql = """CREATE TABLE IF NOT EXISTS masterpassword (
-                    sha_id VARCHAR(128) NOT NULL,
-                    masterpassword_hash VARCHAR(128),
-                    PRIMARY KEY(sha_id)
-                )"""
-        cursor.execute(sql)
+            cursor.execute(sql)
+            sql = """CREATE TABLE IF NOT EXISTS masterpassword (
+                        sha_id VARCHAR(128) NOT NULL,
+                        masterpassword_hash VARCHAR(128),
+                        PRIMARY KEY(sha_id)
+                    )"""
+            cursor.execute(sql)
         sql = """ SELECT masterpassword_hash FROM masterpassword """
         cursor.execute(sql)
         if(cursor.fetchone() == None):

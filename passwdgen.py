@@ -1,11 +1,15 @@
 import random as rn
 import sys
 
-def generatePassword(pattern="aa@AAaA000A"):
+def generatePassword(len=8):
+    pattern=""
     lowercase = "abcdefghijklmnopqrstuvwxyz"
     uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     digits = "0123456789"
     specials = "@/$&"
+    for i in range(0, len):
+        pattern += rn.choice([lowercase[0], uppercase[0], digits[0], specials[0]])
+
     result = ""
     for i in pattern:
         if(i == "a"):
@@ -17,10 +21,3 @@ def generatePassword(pattern="aa@AAaA000A"):
         else:
             result = result + rn.choice(digits)
     return result
-
-
-if __name__ == "__main__":
-	if(len(sys.argv) > 1):
-	    print(generatePassword(sys.argv[1]))
-	else:
-	    print(generatePassword())
