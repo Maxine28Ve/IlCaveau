@@ -7,7 +7,7 @@ from AESCipher import AESCipher
 class Database:
 
     def __init__(self):
-        self.db = pymysql.connect("localhost","python", "CuloMadonna19@__", "Passwords" )
+        self.db = pymysql.connect("localhost","python", "somepassword", "Passwords" )
         cursor = self.db.cursor()
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
