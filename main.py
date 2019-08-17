@@ -77,6 +77,8 @@ def menu():
         print("")
         print("5) Change master password") # TODO
         print("6) Save current entries state")
+        print("7) Import from xml file")
+        print("8) Export to xml file")
         print("0) Quit")
         try:
             choice = int(input(">> Choice: "))
@@ -98,11 +100,18 @@ def menu():
             entries = delete_entries(entries)
         elif(choice == 5):
             os.system("clear")
-            change_master_password()
+            key = change_master_password()
+            save(key, entries)
+            print_error("Updating passwords with new encryption")
         elif(choice == 6):
             os.system("clear")
             save(key, entries)
             print_error("Saved successfully")
+        elif(choice == 7):
+            entries = __import()
+            print_all_entries(entries)
+        elif(choice == 8):
+            __export(entries)
     print_error("Bye Bye")
     return 0
 
@@ -140,12 +149,19 @@ def change_master_password():
         print_error("Aborted")
         return 1
     db.update_masterpassword(new_master_password)
+    return new_master_password
 
 def new_entry():
     print_header("New entry")
-    service = input("> Service: ")
-    username = input("> Username: ")
-    password = input("> password: ")
+    try:
+        service = input("> Service: ")
+        username = input("> Username: ")
+        password = input("> password (!g <length:Int> to generate): ")
+    except KeyboardInterrupt:
+        os.system("clear")
+        print_error("Aborted")
+        return None
+
     # Calculate how many inputs were empty
     empties = 0
     if(service == ""):
@@ -155,7 +171,7 @@ def new_entry():
     if(password == ""):
         empties += 1
     if(empties < 3):
-        return [service, username, password]
+        return [service, username, password if not password.startswith("!g") else generatePassword(int(password[3:]))]
     else:
         print_error("Not enough data to insert in the database (minimum 1)")
     return None
@@ -269,7 +285,46 @@ def input_and_test_password():
         # The user failed to authenticate
         return None
 
+# ============== FILE FUNCTIONS ================================================
+def __export(entries):
+    os.system('clear')
+    print_header("Export")
+    try:
+        path = input("> Export to: ")
+    except KeyboardInterrupt:
+        print_error("Aborted")
 
+    root = ET.Element('root')
+    tag_titles = ['service', 'username', 'password']
+
+    for entry in entries:
+        entry_tag = ET.SubElement(root, 'entry_tag')
+        i = 0
+        for string in entry:
+            item = ET.SubElement(entry_tag, tag_titles[i])
+            item.text = string
+            i += 1
+    data = ET.tostring(root)
+    choice = True
+    if(os.path.exists(path)):
+        choice = input('<!> This file ({}) already exists. Overwrite? [Y/n] <!>'.format(path))
+        choice = True if choice in ['', 'Y', 'y'] else False
+    if(choice):
+        file = open(path, 'w+')
+        file.write(data.decode())
+        file.close()
+    else:
+        print_error("Aborted")
+
+def __import():
+    os.system('clear')
+    print_header("Import")
+    path = input("> Import from: ")
+    root = ET.parse(path).getroot()
+    entries = []
+    for entry in root.findall('entry_tag'):
+        entries.append([list.text for list in entry[0:]])
+    return entries
 
 def main():
     menu()
