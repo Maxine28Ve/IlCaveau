@@ -112,6 +112,7 @@ def menu():
             print_all_entries(entries)
         elif(choice == 8):
             __export(entries)
+    os.system("reset")
     print_error("Bye Bye")
     return 0
 
@@ -123,8 +124,18 @@ def print_all_entries(entries):
     max_len = 0
     os.system("clear")
     print_header("Your passwords")
+    service_len = 0
+    username_len = 0
     for entry in entries:
-        str = "{}) {} | {} | {}".format(counter, entry[0], entry[1], entry[2])
+        if(service_len < len(entry[0])):
+            service_len = len(entry[0])
+        if(username_len < len(entry[1])):
+            username_len = len(entry[1])
+
+    for entry in entries:
+        str = "{}) {}{}| {}{}| {}".format(counter, entry[0], " " * (service_len
+        - len(entry[0]) + 1), entry[1], " " *  (username_len - len(entry[1]) + 1),
+        entry[2])
         counter += 1
         # We calculate how long the separator has to be for it to look nice
         if(max_len < len(str)):
