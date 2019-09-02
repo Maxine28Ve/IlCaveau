@@ -63,7 +63,9 @@ def menu():
     if(key is None):
         print_error("Go fuck yourself ( ͡° ͜ʖ ͡°)")
         return 0
-
+    if(key == -1):
+        print_error("Aborted")
+        return 0
     choice = -1
     root = None
     entries = load(key)
@@ -108,8 +110,10 @@ def menu():
             save(key, entries)
             print_error("Saved successfully")
         elif(choice == 7):
-            entries = __import()
-            print_all_entries(entries)
+            tmp = __import()
+            if(tmp is not None):
+                entries = tmp
+                print_all_entries(entries)
         elif(choice == 8):
             __export(entries)
     os.system("reset")
@@ -155,7 +159,7 @@ def change_master_password():
             if(new_master_password != confirm_new_master_password):
                 print_error("The passwords do not correspond. Retry")
                 continue
-    except KeyboardInterrupt as e:
+    except (KeyboardInterrupt, EOFError) as e:
         os.system("clear")
         print_error("Aborted")
         return 1
@@ -168,7 +172,7 @@ def new_entry():
         service = input("> Service: ")
         username = input("> Username: ")
         password = input("> password (!g <length:Int> to generate): ")
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError) as e:
         os.system("clear")
         print_error("Aborted")
         return None
@@ -182,7 +186,12 @@ def new_entry():
     if(password == ""):
         empties += 1
     if(empties < 3):
-        return [service, username, password if not password.startswith("!g") else generatePassword(int(password[3:]))]
+        length = 0
+        try:
+            length = int(password[3:])
+        except ValueError:
+            length = 8
+        return [service, username, password if not password.startswith("!g") else generatePassword(length)]
     else:
         print_error("Not enough data to insert in the database (minimum 1)")
     return None
@@ -204,27 +213,41 @@ def edit_entry(entries):
                 print_error("I need an integer!")
                 retry = True
                 continue
+
             # Check if the chosen index is in the entries range
             if(choice < 0 or choice > len(entries)):
                 os.system("clear")
                 print_error("Out of bounds! choice must be 0 <= choice <= {}".
                     format(len(entries)))
                 retry = True
-        print("Editing: {}) [{}, {}, {}]".format(choice, entries[choice - 1][0],
+    except (KeyboardInterrupt, EOFError) as e:
+        os.system("clear")
+        print_error("Aborted")
+        # Rollback
+        return entries
+
+    print("Editing: {}) [{}, {}, {}]".format(choice, entries[choice - 1][0],
                                                         entries[choice - 1][1],
                                                         entries[choice - 1][2],))
-
-        # Rollback in case something bad happens
-        tmp_entry = entries[choice - 1]
+    # Rollback in case something bad happens
+    tmp_entry = entries[choice - 1]
+    try:
 
         # Get the new values for the attributes, "" means Do not edit
         service = input("> Service: ")
         username = input("> Username: ")
         password = input("> password: ")
+        length = 0
+        try:
+            length = int(password[3:])
+        except ValueError:
+            length = 8
         entries[choice - 1][0] = entries[choice - 1][0] if service == "" else service
         entries[choice - 1][1] = entries[choice - 1][1] if username == "" else username
         entries[choice - 1][2] = entries[choice - 1][2] if password == "" else password
-    except KeyboardInterrupt:
+        if(password.startswith("!g")):
+            entries[choice - 1][2] = generatePassword(length)
+    except (KeyboardInterrupt, EOFError) as e:
         os.system("clear")
         print_error("Aborted")
         # Rollback
@@ -237,7 +260,13 @@ def delete_entries(entries):
     print_all_entries(entries)
     # The entries we want to delete can be indicated on a single line,
     # separated by a space
-    choices = input("-->Input the indexes: ").split()
+    try:
+        choices = input("-->Input the indexes: ").split()
+    except (KeyboardInterrupt, EOFError) as e:
+        os.system("clear")
+        print_error("Aborted")
+        return entries
+
     for choice in choices:
         try:
             entries[int(choice) - 1] = []
@@ -282,27 +311,28 @@ def input_and_test_password():
         is the legitimate owner of such passwords.
         Returns: the input password if it's succesfully authenticated or None otherwise
     """
-    os.system("clear")
-    db = Database()
-    print_header("Makin\' Bacon")
-    # Make the user input the password, hash it and compare the hash to the one
-    # stored in the database
-    attacking = input("> Insert password: ") # user input
-    defending = db.get_masterpassword()[0] # database retrieval
-    if(hash_string(attacking) == defending):
-        # We return the input password because it will serve as the encryption key
-        return attacking
-    else:
-        # The user failed to authenticate
-        return None
-
+    try:
+        os.system("clear")
+        db = Database()
+        print_header("Makin\' Bacon")
+        # Make the user input the password, hash it and compare the hash to the one
+        # stored in the database
+        attacking = input("> Insert password: ") # user input
+        defending = db.get_masterpassword()[0] # database retrieval
+        if(hash_string(attacking) == defending):
+            # We return the input password because it will serve as the encryption key
+            return attacking
+    except (KeyboardInterrupt, EOFError) as e:
+        return -1
+    # The user failed to authenticate
+    return None
 # ============== FILE FUNCTIONS ================================================
 def __export(entries):
     os.system('clear')
     print_header("Export")
     try:
         path = input("> Export to: ")
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, EOFError) as e:
         print_error("Aborted")
 
     root = ET.Element('root')
@@ -330,13 +360,30 @@ def __export(entries):
 def __import():
     os.system('clear')
     print_header("Import")
-    path = input("> Import from: ")
-    root = ET.parse(path).getroot()
-    entries = []
-    for entry in root.findall('entry_tag'):
-        entries.append([list.text for list in entry[0:]])
-    return entries
+    try:
+        error = False
+        while(error):
+            error = False
+            try:
+                path = input("> Import from: ")
+                with open(path, "r") as file:
+                    pass
+                filename, file_extension = os.path.splitext(path)
+                if(file_extension is not "xml"):
+                    error = True
+                    print_error("Can't open non-xml files")
+            except OSError:
+                error = True
+                print_error("Cannot open {}".format(path))
 
+        root = ET.parse(path).getroot()
+        entries = []
+        for entry in root.findall('entry_tag'):
+            entries.append([list.text for list in entry[0:]])
+        return entries
+    except (KeyboardInterrupt, EOFError) as e:
+        print_error("Aborted")
+    return None
 def main():
     menu()
 
